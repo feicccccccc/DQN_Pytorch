@@ -5,7 +5,7 @@ Pytorch Documentation: https://pytorch.org/tutorials/intermediate/reinforcement_
 DeepMind Youtube lecture: https://www.youtube.com/watch?v=2pWv7GOvuf0&list=PLqYmG7hTraZDM-OYHWgPebj2MfCFzFObQ
 Original Paper: https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
 
-Some code is being copied from the Pytorch modification with slight modification to make thing more familiar (to me).
+Some code is being copied from the Pytorch official tutorial with slight modification to make thing more familiar (to me).
 
 Note to the DQN and MDP Process:
 Under MDP framework, every state s have a associate Action Value Function Q(s,a), which
@@ -26,7 +26,7 @@ Learn and generalise the Q(s,a) using DNN. Base of the Q(s,a), act ε-greedy
 
 important technique:
 Eligibility trace E(θ): contribution to the Q by parameter θ
-loss function (between true Q and estimated Q': Mean square error
+loss function (between true Q and estimated Q'): Mean square error
 Experience replay: Reduce correlation between path to reduce variance
 
 """
@@ -42,6 +42,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
+
+Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
+
 
 class ReplayMemory(object):
     """
