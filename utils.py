@@ -3,6 +3,7 @@ Reference and credit:
 https://www.youtube.com/watch?v=UlJzzLYgYoE
 
 Utilities to wrap env with preprocess of the observation
+Ref: https://github.com/openai/gym/tree/master/gym/wrappers
 And also plot the learning curve
 """
 
@@ -130,7 +131,7 @@ class StackFrames(gym.ObservationWrapper):
 def make_env(env_name, shape=(84, 84, 1), repeat=4, clip_rewards=False,
              no_ops=0, fire_first=False):
     env = gym.make(env_name)
-    env = RepeatActionAndMaxFrame(env, repeat, clip_rewards, no_ops, fire_first)
+    # env = RepeatActionAndMaxFrame(env, repeat, clip_rewards, no_ops, fire_first)
     env = PreprocessFrame(shape, env)
     env = StackFrames(env, repeat)
 

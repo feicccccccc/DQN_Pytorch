@@ -12,13 +12,22 @@ import numpy as np
 from agent import DQNAgent
 from utils import plot_learning_curve, make_env
 
+NUMBER_OF_FRAME = 4
+
 if __name__ == '__main__':
-    env = gym.make('CartPole-v0')
+
+    env = gym.make("CartPole-v0")
+    env.reset()
+
+    init_screen = env.render(mode='rgb_array')  # dim: (800, 1200, 3)
+    init_screen = init_screen.transpose((2, 0, 1))
+    init_screen = np.repeat(init_screen, NUMBER_OF_FRAME, axis=0)
+
     best_score = -np.inf
-    load_checkpoint = False
-    n_games = 100
+    load_checkpoint = False  # if user want to restart from checkpoint
+    n_games = 100  # number of episode
     agent = DQNAgent(gamma=0.99, epsilon=1.0, lr=0.0001,
-                     input_dims=(env.observation_space.shape),
+                     input_dims=(init_screen.shape),
                      n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
                      batch_size=32, replace=1000, eps_dec=1e-5,
                      chkpt_dir='models/', algo='DQNAgent',
