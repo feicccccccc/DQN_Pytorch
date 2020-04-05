@@ -74,13 +74,13 @@ class DeepQNetwork(nn.Module):
 
         flat1 = F.relu(self.fc1(conv_state))
         flat2 = F.relu(self.fc2(flat1))
-        
+
         actions = self.head(flat2)
 
         return actions
 
     def save_checkpoint(self):
-        print('Save model weight at dir: {}'.format(self.))
+        print('Save model weight at dir: {}'.format(self.checkpoint_dir))
         torch.save(self.state_dict(), self.checkpoint_file)
 
     def load_checkpoint(self):
