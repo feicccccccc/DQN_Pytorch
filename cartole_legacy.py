@@ -79,11 +79,10 @@ NUMBER_OF_FRAME = 4
 n_actions = env.action_space.n
 
 # nn.conv2d input format (channel, height, width)
-# on
 init_screen = env.render(mode='rgb_array')  # dim: (800, 1200, 3)
-init_screen = np.expand_dims(init_screen.transpose((2, 0, 1)), axis=0)
+init_screen = init_screen.transpose((2, 0, 1))
 init_screen = np.repeat(init_screen, NUMBER_OF_FRAME, axis=0)
-_, _, screen_height, screen_width = init_screen.shape  # shape: (frame, channel, height, width)
+_, screen_height, screen_width = init_screen.shape  # shape: (frame * channel, height, width)
 
 # Q-learning is off-policy
 
@@ -121,7 +120,7 @@ def select_action(state):
             # in short, find the largest column in the network output, which is the predicated largest Q(s,a)
             action_out = behavioural_net(state)
             print("Step: {}, eps_threshold: {}, network output: {}".format(steps_done, eps_threshold, action_out))
-            action_out = action_out.max(1)[1].view(1, 1)
+            action_out = action_out.max(0)[1]
             return action_out
     else:
         action_out = torch.tensor([[random.randrange(n_actions)]], device=device, dtype=torch.long)
@@ -167,10 +166,12 @@ def optimize_model():
 
     # Compute a mask of non-final states and concatenate the batch elements
     # (a final state would've been the one after which simulation ended)
-    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
-                                            batch.next_state)), device=device, dtype=torch.bool)
-    non_final_next_states = torch.cat([s for s in batch.next_state
-                                       if s is not None])
+    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)), device=device, dtype=torch.bool)
+    for s in batch.next_state:
+        print(s.shape)
+
+    non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
+
     state_batch = torch.cat(batch.state)
     action_batch = torch.cat(batch.action)
     reward_batch = torch.cat(batch.reward)
@@ -196,6 +197,8 @@ def optimize_model():
     # Optimize the model
     optimizer.zero_grad()
     loss.backward()
+
+    # gradient clipping
     for param in behavioural_net.parameters():
         param.grad.data.clamp_(-1, 1)
     optimizer.step()
@@ -203,39 +206,47 @@ def optimize_model():
 
 if __name__ == '__main__':
     num_episodes = 50
-    state = init_screen
     for i_episode in range(num_episodes):
 
         # Current state is the current screen + 3 frame before
         # TODO: Try RNN here?
         env.reset()
-        last_screen = np.expand_dims(env.render(mode='rgb_array').transpose((2, 0, 1)), axis=0)
-        state = np.append(state[0:NUMBER_OF_FRAME-1], last_screen, axis=0)
-        state = torch.from_numpy(state)
+
+        init_screen = env.render(mode='rgb_array')  # dim: (800, 1200, 3)
+        init_screen = init_screen.transpose((2, 0, 1))
+        init_screen = np.repeat(init_screen, NUMBER_OF_FRAME, axis=0)
+
+        last_screen = env.render(mode='rgb_array').transpose((2, 0, 1))
+        state = np.append(init_screen[0:(NUMBER_OF_FRAME-1)*3], last_screen, axis=0)
+        dnn_input = torch.from_numpy(state)  # actual input into the network
+        dnn_input = dnn_input.unsqueeze(0).to(device)  # add batch dimension
 
         # itertools count using natural number
         for t in count():
             # Select and perform an action
-            action = select_action(state)
+            action = select_action(dnn_input.float())
             _, reward, done, _ = env.step(action.item())
             reward = torch.tensor([reward], device=device)
 
             # S -> A -> R
 
             # Observe new state
-            last_screen = np.expand_dims(env.render(mode='rgb_array').transpose((2, 0, 1)), axis=0)
-            state = np.append(state[0:NUMBER_OF_FRAME - 1], last_screen, axis=0)
-            state = torch.from_numpy(state)
+            last_screen = env.render(mode='rgb_array').transpose((2, 0, 1))
+            state = np.append(state[0:(NUMBER_OF_FRAME-1)*3], last_screen, axis=0)
+            next_dnn_input = torch.from_numpy(state)
+            next_dnn_input = dnn_input.unsqueeze(0).to(device)
+
             if not done:
-                next_state = state
+                next_dnn_input = dnn_input
             else:
                 next_state = None
 
             # Store the transition in memory
-            memory.push(state, action, next_state, reward)
-
-            # Move to the next state
-            state = next_state
+            # Don't know why the shape mess up when in terminal state
+            if len(next_dnn_input.shape) == 5:
+                next_dnn_input = dnn_input.squeeze(0).to(device).unsqueeze(0)
+            print("dnn_input shape: {}, output: {}, done: {}".format(dnn_input.shape, next_dnn_input.shape, done))
+            memory.push(dnn_input, action, next_dnn_input, reward)
 
             # Perform one step of the optimization (on the target network)
             # Won't do without enough experience
@@ -245,7 +256,7 @@ if __name__ == '__main__':
                 plot_durations()
                 break
         # Update the target network, copying all weights and biases in DQN
-        # similar to police evaulation
+        # similar to police evaluation
         if i_episode % TARGET_UPDATE == 0:
             target_net.load_state_dict(behavioural_net.state_dict())
 

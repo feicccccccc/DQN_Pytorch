@@ -5,8 +5,6 @@ Pytorch Documentation: https://pytorch.org/tutorials/intermediate/reinforcement_
 DeepMind Youtube lecture: https://www.youtube.com/watch?v=2pWv7GOvuf0&list=PLqYmG7hTraZDM-OYHWgPebj2MfCFzFObQ
 Original Paper: https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf
 
-Some code is being copied from the Pytorch official tutorial with slight modification to make thing more familiar (to me).
-
 Note to the DQN and MDP Process:
 Under MDP framework, every state s have a associate Action Value Function Q(s,a), which
 denote the
@@ -19,13 +17,12 @@ behavioural Policy : ε-greedy
 target Policy: greedy
 
 Update rule:
-forward view TD(λ) to update Q(s,a)
+TD(0) to update Q(s,a)
 
 General idea:
-Learn and generalise the Q(s,a) using DNN. Base of the Q(s,a), act ε-greedy
+Learn and generalise the Q(s,a) using DNN. Base on the Q(s,a), act ε-greedy
 
 important technique:
-Eligibility trace E(θ): contribution to the Q by parameter θ
 loss function (between true Q and estimated Q'): Mean square error
 Experience replay: Reduce correlation between path to reduce variance
 
@@ -128,7 +125,7 @@ class DQN(nn.Module):
         linear_input_size = convw * convh * 64
 
         self.fc1 = nn.Linear(linear_input_size, outputs)
-        self.head = nn.Softmax()
+        self.head = nn.Softmax(dim=-1)
 
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
@@ -153,7 +150,8 @@ class DQN(nn.Module):
         x = self.bn3(x)
         x = self.conv3_relu(x)
 
+        x = x.flatten()
         x = self.fc1(x)
         x = self.head(x)
 
-        return self.head(x.view(x.size(0), -1))
+        return x
