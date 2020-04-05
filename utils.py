@@ -92,47 +92,64 @@ class PreprocessFrame(gym.ObservationWrapper):
     def __init__(self, shape, env=None):
         super(PreprocessFrame, self).__init__(env)
         self.shape = (shape[2], shape[0], shape[1])
-        self.observation_space = gym.spaces.Box(low=0.0, high=1.0,
-                                                shape=self.shape, dtype=np.float32)
+        self.observation_space = gym.spaces.Box(low=0.0, high=1.0, shape=self.shape, dtype=np.float32)
 
-    def observation(self, obs):
-        new_frame = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
-        resized_screen = cv2.resize(new_frame, self.shape[1:],
-                                    interpolation=cv2.INTER_AREA)
+    def observation(self, observation):
+        """
+        Base on what is the desired output
+        i.e. CartPole output 4 number, the render is a (800,1200,3) on my computer and varies across different OS
+        :param observation: original observation
+        :return: processed Image
+        """
+        new_frame = self.render(mode='rgb_array')
+        # convert to grey scale / eliminate the color channel dim
+        new_frame = cv2.cvtColor(new_frame, cv2.COLOR_RGB2GRAY)
+        # downscale the image to desired output
+        # Check the dimension
+        resized_screen = cv2.resize(new_frame, (self.shape[2], self.shape[1]), interpolation=cv2.INTER_AREA)
+        # change it back to (channel, height, width) to fit Pytorch convention
         new_obs = np.array(resized_screen, dtype=np.uint8).reshape(self.shape)
+        # normalisation
         new_obs = new_obs / 255.0
 
         return new_obs
 
 
 class StackFrames(gym.ObservationWrapper):
+    """
+    Create a buffer to store previous frame
+    """
     def __init__(self, env, repeat):
         super(StackFrames, self).__init__(env)
-        self.observation_space = gym.spaces.Box(
-            env.observation_space.low.repeat(repeat, axis=0),
-            env.observation_space.high.repeat(repeat, axis=0),
-            dtype=np.float32)
-        self.stack = collections.deque(maxlen=repeat)
+        self.repeat = repeat
+        self.img_stack = collections.deque(maxlen=repeat)
 
     def reset(self):
-        self.stack.clear()
+        self.img_stack.clear()
         observation = self.env.reset()
-        for _ in range(self.stack.maxlen):
-            self.stack.append(observation)
-
-        return np.array(self.stack).reshape(self.observation_space.low.shape)
+        # repeat the start frame in the image stack
+        for _ in range(self.img_stack.maxlen):
+            self.img_stack.append(observation)
+        return self.img_stack
 
     def observation(self, observation):
-        self.stack.append(observation)
+        self.img_stack.append(observation)
+        return self.img_stack
 
-        return np.array(self.stack).reshape(self.observation_space.low.shape)
 
-
-def make_env(env_name, shape=(84, 84, 1), repeat=4, clip_rewards=False,
-             no_ops=0, fire_first=False):
+def make_env(env_name, shape=(200, 300, 1), repeat=4, clip_rewards=False, no_ops=0, fire_first=False):
+    """
+    Create the env with different wrapper for state preprocessing
+    :param env_name: Gym env id
+    :param shape: desired output shape
+    :param repeat: number of stack frame
+    :param clip_rewards: clip reward flag
+    :param no_ops:
+    :param fire_first:
+    :return: env with wrapper
+    """
     env = gym.make(env_name)
     # env = RepeatActionAndMaxFrame(env, repeat, clip_rewards, no_ops, fire_first)
-    env = PreprocessFrame(shape, env)
-    env = StackFrames(env, repeat)
-
+    env = PreprocessFrame(shape, env)  # Turn to grey and compress
+    env = StackFrames(env, repeat)  # stack frame
     return env

@@ -4,6 +4,7 @@ https://www.youtube.com/watch?v=UlJzzLYgYoE
 
 Main loop
 Slightly change to the network layer structure and parameter naming
+Change gym wrapper and observation
 Add a lot of comment for reference
 """
 
@@ -16,12 +17,8 @@ NUMBER_OF_FRAME = 4
 
 if __name__ == '__main__':
 
-    env = gym.make("CartPole-v0")
+    env = make_env("CartPole-v0")
     env.reset()
-
-    init_screen = env.render(mode='rgb_array')  # dim: (800, 1200, 3)
-    init_screen = init_screen.transpose((2, 0, 1))
-    init_screen = np.repeat(init_screen, NUMBER_OF_FRAME, axis=0)
 
     best_score = -np.inf
     load_checkpoint = False  # if user want to restart from checkpoint
