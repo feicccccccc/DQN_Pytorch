@@ -130,11 +130,13 @@ class StackFrames(gym.ObservationWrapper):
         # repeat the start frame in the image stack
         for _ in range(self.img_stack.maxlen):
             self.img_stack.append(observation)
-        return self.img_stack
+        _, dimh, dimw = observation.shape  # reduce the first dimension
+        return np.array(self.img_stack).reshape((self.repeat, dimh, dimw))
 
     def observation(self, observation):
         self.img_stack.append(observation)
-        return self.img_stack
+        _, dimh, dimw = observation.shape  # reduce the first dimension
+        return np.array(self.img_stack).reshape((self.repeat, dimh, dimw))
 
 
 def make_env(env_name, shape=(200, 300, 1), repeat=4, clip_rewards=False, no_ops=0, fire_first=False):
