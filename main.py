@@ -28,7 +28,7 @@ if __name__ == '__main__':
                      input_dims=init_screen.shape,
                      n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
                      batch_size=64, replace=1000, eps_dec=1e-5,
-                     chkpt_dir='models/', algo='DQNAgent',
+                     checkpoint_dir='models/', algo='DQNAgent',
                      env_name='CartPole-v0-RGB')
 
     if load_checkpoint:
@@ -45,14 +45,19 @@ if __name__ == '__main__':
         score = 0
         while not done:
             action = agent.choose_action(observation)
-            observation_, reward, done, info = env.step(action)
+            next_observation, reward, done, info = env.step(action)
             score += reward
 
             if not load_checkpoint:
-                agent.store_transition(observation, action, reward, observation_, int(done))
+                # store the transition (s,a,r,s') inside the replay memory
+                agent.store_transition(observation, action, reward, next_observation, int(done))
+                # learn through the experience (if there's enough batches)
                 agent.learn()
-            observation = observation_
+            observation = next_observation
             n_steps += 1
+
+        # After 1 episode finish
+        # keep record stuff
         scores.append(score)
         steps_array.append(n_steps)
 

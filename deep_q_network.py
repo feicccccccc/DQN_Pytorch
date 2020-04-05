@@ -70,7 +70,7 @@ class DeepQNetwork(nn.Module):
         conv2 = F.relu(self.conv2(conv1))
         conv3 = F.relu(self.conv3(conv2))
 
-        conv_state = conv3.flatten()
+        conv_state = conv3.flatten(start_dim=1)  # don't flatten the batch dimension
 
         flat1 = F.relu(self.fc1(conv_state))
         flat2 = F.relu(self.fc2(flat1))
