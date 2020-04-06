@@ -108,7 +108,9 @@ class DQNAgent(object):
         # change the transition to torch tensor for further processing
         states_tensor = torch.tensor(states).to(self.q_eval.device)
         rewards_tensor = torch.tensor(rewards).to(self.q_eval.device)
-        terminals_tensor = torch.tensor(terminals).to(self.q_eval.device)
+        # cast to torch.bool to remove warning
+        # TODO: change the original numpy array dtype as well
+        terminals_tensor = torch.tensor(terminals, dtype=torch.bool).to(self.q_eval.device)
         actions_tensor = torch.tensor(actions).to(self.q_eval.device)
         next_states_tensor = torch.tensor(next_states).to(self.q_eval.device)
 
@@ -148,16 +150,20 @@ class DQNAgent(object):
         self.replace_target_network()
 
         # batches of experience
+        # terminals: terminal state flag
         states, actions, rewards, next_states, terminals = self.sample_memory()
         indices = np.arange(self.batch_size)
 
+        # Estimate Q value
         q_pred = self.q_eval.forward(states)[indices, actions]
         q_next = self.q_next.forward(next_states).max(dim=1)[0]
 
+        # Change the reward of terminal state to 0
         q_next[terminals] = 0.0
+        # 1 step look ahead
         q_target = rewards + self.gamma * q_next
 
-        # TD error
+        # Bootstrap learning loss
         loss = self.q_eval.loss(q_target, q_pred).to(self.q_eval.device)
         # compute the gradient
         loss.backward()
