@@ -21,13 +21,13 @@ if __name__ == '__main__':
     init_screen = env.reset()
     best_score = -np.inf
     load_checkpoint = False  # if user want to restart from checkpoint
-    n_games = 100  # number of episode
+    n_games = 1000  # number of episode
 
     # replace target network with evaluation network after 1000 step
-    agent = DQNAgent(gamma=0.99, epsilon=1.0, lr=0.0001,
+    agent = DQNAgent(gamma=0.99, epsilon=1.0, lr=0.001,
                      input_dims=init_screen.shape,
-                     n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
-                     batch_size=64, replace=1000, eps_dec=1e-5,
+                     n_actions=env.action_space.n, mem_size=50000, eps_min=0.2,
+                     batch_size=64, replace=200, eps_dec=5e-4,
                      checkpoint_dir='models/', algo='DQNAgent',
                      env_name='CartPole-v0-RGB')
 
@@ -67,8 +67,8 @@ if __name__ == '__main__':
               'epsilon %.2f' % agent.epsilon, 'steps', n_steps)
 
         if avg_score > best_score:
-            # if not load_checkpoint:
-            #    agent.save_models()
+            if not load_checkpoint:
+                agent.save_models()
             best_score = avg_score
 
         eps_history.append(agent.epsilon)

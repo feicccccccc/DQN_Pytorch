@@ -13,7 +13,7 @@ from replay_mem import ReplayBuffer
 
 class DQNAgent(object):
     def __init__(self, gamma, epsilon, lr, n_actions, input_dims,
-                 mem_size, batch_size, eps_min=0.01, eps_dec=5e-7,
+                 mem_size, batch_size, eps_min=0.01, eps_dec=5e-4,
                  replace=1000, algo=None, env_name=None, checkpoint_dir='tmp/dqn'):
         """
         Init the Agent parameter
@@ -75,7 +75,7 @@ class DQNAgent(object):
             # move the observation to the network's device
             # [] to add batch dimension
             state = torch.tensor([observation], dtype=torch.float).to(self.q_eval.device)
-            actions = self.q_eval.forward(state)
+            actions = self.q_eval.eval(state)
             # get the indices of the maximum output (probability)
             # i.e.
             # a: tensor([0.7875, 0.9929])
@@ -123,6 +123,7 @@ class DQNAgent(object):
         :return: None
         """
         if self.learn_step_counter % self.replace_target_counter == 0:
+            print("Replacing target network weight with eval network")
             self.q_next.load_state_dict(self.q_eval.state_dict())
 
     def decrement_epsilon(self):
@@ -156,6 +157,7 @@ class DQNAgent(object):
 
         # Estimate Q value
         q_pred = self.q_eval.forward(states)[indices, actions]
+        # more like V(s) = max_a Q(s,a)
         q_next = self.q_next.forward(next_states).max(dim=1)[0]
 
         # Change the reward of terminal state to 0
@@ -164,7 +166,7 @@ class DQNAgent(object):
         q_target = rewards + self.gamma * q_next
 
         # Bootstrap learning loss
-        loss = self.q_eval.loss(q_target, q_pred).to(self.q_eval.device)
+        loss = self.q_eval.loss(q_pred, q_target.detach())
         # compute the gradient
         loss.backward()
 
