@@ -17,19 +17,28 @@ NUMBER_OF_FRAME = 4
 
 if __name__ == '__main__':
 
-    env = make_env("CartPole-v0")
+    # env = make_env("CartPole-v0")
+    env = gym.make("CartPole-v0")
+
     init_screen = env.reset()
     best_score = -np.inf
     load_checkpoint = False  # if user want to restart from checkpoint
     n_games = 1000  # number of episode
 
     # replace target network with evaluation network after 1000 step
-    agent = DQNAgent(gamma=0.99, epsilon=1.0, lr=0.001,
-                     input_dims=init_screen.shape,
-                     n_actions=env.action_space.n, mem_size=50000, eps_min=0.2,
-                     batch_size=64, replace=200, eps_dec=5e-4,
+    # agent = DQNAgent(gamma=0.99, epsilon=1.0, lr=0.001,
+    #                  input_dims=init_screen.shape,
+    #                  n_actions=env.action_space.n, mem_size=50000, eps_min=0.2,
+    #                  batch_size=64, replace=200, eps_dec=5e-4,
+    #                  checkpoint_dir='models/', algo='DQNAgent',
+    #                  env_name='CartPole-v0-RGB')
+
+    agent = DQNAgent(gamma=0.99, epsilon=1.0, lr=0.0001,
+                     input_dims=env.observation_space.shape,
+                     n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
+                     batch_size=64, replace=1000, eps_dec=1e-5,
                      checkpoint_dir='models/', algo='DQNAgent',
-                     env_name='CartPole-v0-RGB')
+                     env_name='CartPole-v0-FC')
 
     if load_checkpoint:
         agent.load_models()
@@ -44,6 +53,7 @@ if __name__ == '__main__':
 
         score = 0
         while not done:
+            env.render()
             action = agent.choose_action(observation)
             next_observation, reward, done, info = env.step(action)
             score += reward

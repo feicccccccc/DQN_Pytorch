@@ -7,7 +7,7 @@ Q-learning Agent with the action value function parameterize by a ConvNet
 
 import numpy as np
 import torch
-from deep_q_network import DeepQNetwork
+from deep_q_network import DeepQNetwork_CNN, DeepQNetwork_FC
 from replay_mem import ReplayBuffer
 
 
@@ -54,15 +54,15 @@ class DQNAgent(object):
         self.memory = ReplayBuffer(mem_size, input_dims, n_actions)
 
         # current Q network
-        self.q_eval = DeepQNetwork(self.lr, self.n_actions,
-                                   input_dims=self.input_dims,
-                                   name=self.env_name+'_'+self.algo+'_q_eval',
-                                   cheakpoint_dir=self.checkpoint)
+        self.q_eval = DeepQNetwork_FC(self.lr, self.n_actions,
+                                       input_dims=self.input_dims,
+                                       name=self.env_name+'_'+self.algo+'_q_eval',
+                                       cheakpoint_dir=self.checkpoint)
         # next Q network
-        self.q_next = DeepQNetwork(self.lr, self.n_actions,
-                                   input_dims=self.input_dims,
-                                   name=self.env_name+'_'+self.algo+'_q_next',
-                                   cheakpoint_dir=self.checkpoint)
+        self.q_next = DeepQNetwork_FC(self.lr, self.n_actions,
+                                       input_dims=self.input_dims,
+                                       name=self.env_name+'_'+self.algo+'_q_next',
+                                       cheakpoint_dir=self.checkpoint)
 
     def choose_action(self, observation):
         """
@@ -75,7 +75,8 @@ class DQNAgent(object):
             # move the observation to the network's device
             # [] to add batch dimension
             state = torch.tensor([observation], dtype=torch.float).to(self.q_eval.device)
-            actions = self.q_eval.eval(state)
+            with torch.no_grad():
+                actions = self.q_eval.forward(state)
             # get the indices of the maximum output (probability)
             # i.e.
             # a: tensor([0.7875, 0.9929])
@@ -156,6 +157,7 @@ class DQNAgent(object):
         indices = np.arange(self.batch_size)
 
         # Estimate Q value
+        # Get the network output actions value from experience
         q_pred = self.q_eval.forward(states)[indices, actions]
         # more like V(s) = max_a Q(s,a)
         q_next = self.q_next.forward(next_states).max(dim=1)[0]
@@ -165,7 +167,7 @@ class DQNAgent(object):
         # 1 step look ahead
         q_target = rewards + self.gamma * q_next
 
-        # Bootstrap learning loss
+        # learning loss
         loss = self.q_eval.loss(q_pred, q_target.detach())
         # compute the gradient
         loss.backward()

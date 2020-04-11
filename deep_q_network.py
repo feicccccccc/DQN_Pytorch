@@ -15,7 +15,7 @@ import torch.optim as optim
 import numpy as np
 
 
-class DeepQNetwork(nn.Module):
+class DeepQNetwork_CNN(nn.Module):
     def __init__(self, lr, n_actions, input_dims, cheakpoint_dir, name):
         """
         Init the network
@@ -25,7 +25,7 @@ class DeepQNetwork(nn.Module):
         :param cheakpoint_dir: Path to store the weight in .pth file
         :param name: Name of the checkpoint file
         """
-        super(DeepQNetwork, self).__init__()
+        super(DeepQNetwork_CNN, self).__init__()
         self.checkpoint_dir = cheakpoint_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name)
 
@@ -41,8 +41,6 @@ class DeepQNetwork(nn.Module):
 
         self.fc1 = nn.Linear(fc_input_dims, 512)
         self.fc2 = nn.Linear(512, n_actions)
-
-        self.head = nn.Softmax(dim=-1)
 
         self.optimizer = optim.Adam(self.parameters(), lr=lr)
 
@@ -73,9 +71,54 @@ class DeepQNetwork(nn.Module):
         conv_state = conv3.flatten(start_dim=1)  # don't flatten the batch dimension
 
         flat1 = F.relu(self.fc1(conv_state))
-        flat2 = F.relu(self.fc2(flat1))
+        actions = F.relu(self.fc2(flat1))
 
-        actions = self.head(flat2)
+        return actions
+
+    def save_checkpoint(self):
+        print('Save model weight at dir: {}'.format(self.checkpoint_dir))
+        torch.save(self.state_dict(), self.checkpoint_file)
+
+    def load_checkpoint(self):
+        print('Loading weight')
+        self.load_state_dict(torch.load(self.checkpoint_file))
+
+
+class DeepQNetwork_FC(nn.Module):
+    def __init__(self, lr, n_actions, input_dims, cheakpoint_dir, name):
+        """
+        Init the network
+        :param lr: Learning Rate
+        :param n_actions: number of action
+        :param input_dims: Channel following Pytorch convention (batch, channel, height, width)
+        :param cheakpoint_dir: Path to store the weight in .pth file
+        :param name: Name of the checkpoint file
+        """
+        super(DeepQNetwork_FC, self).__init__()
+        self.checkpoint_dir = cheakpoint_dir
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, name)
+
+        """
+        Network structure:
+        3 Layer ConvNet -> 2 Layer FC layer -> output
+        """
+        self.fc1 = nn.Linear(input_dims[0], 16)
+        self.fc2 = nn.Linear(16, 32)
+        self.fc3 = nn.Linear(32, n_actions)
+
+        self.head = nn.Softmax(dim=-1)
+
+        self.optimizer = optim.Adam(self.parameters(), lr=lr)
+
+        self.loss = nn.MSELoss()
+        # TODO: poor me no GPU, build a colab training script
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.to(self.device)
+
+    def forward(self, state):
+        fc1 = F.relu(self.fc1(state))
+        fc2 = F.relu(self.fc2(fc1))
+        actions = F.relu(self.fc3(fc2))
 
         return actions
 
