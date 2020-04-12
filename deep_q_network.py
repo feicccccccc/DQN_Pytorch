@@ -91,12 +91,12 @@ class DeepQNetwork_FC(nn.Module):
         :param lr: Learning Rate
         :param n_actions: number of action
         :param input_dims: Channel following Pytorch convention (batch, channel, height, width)
-        :param cheakpoint_dir: Path to store the weight in .pth file
+        :param cheakpoint_dir: Path to store the weight in .pt file
         :param name: Name of the checkpoint file
         """
         super(DeepQNetwork_FC, self).__init__()
         self.checkpoint_dir = cheakpoint_dir
-        self.checkpoint_file = os.path.join(self.checkpoint_dir, name)
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, name + ".pt")
 
         """
         Network structure:

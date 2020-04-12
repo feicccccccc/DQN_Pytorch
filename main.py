@@ -18,11 +18,14 @@ NUMBER_OF_FRAME = 4
 if __name__ == '__main__':
 
     # env = make_env("CartPole-v0")
-    env = gym.make("CartPole-v0")
+    env = gym.make("CartPole-v1")  # same env with different registry
 
     init_screen = env.reset()
     best_score = -np.inf
-    load_checkpoint = False  # if user want to restart from checkpoint
+    load_checkpoint = True  # if user want to restart from checkpoint
+    greedy_action = False  # use behavioural policy / target policy
+    learn = True
+    initial_epsilon = 1.0
     n_games = 1000  # number of episode
 
     # replace target network with evaluation network after 1000 step
@@ -33,10 +36,10 @@ if __name__ == '__main__':
     #                  checkpoint_dir='models/', algo='DQNAgent',
     #                  env_name='CartPole-v0-RGB')
 
-    agent = DQNAgent(gamma=0.99, epsilon=1.0, lr=0.0001,
+    agent = DQNAgent(gamma=0.99, epsilon=initial_epsilon, lr=0.00001,
                      input_dims=env.observation_space.shape,
                      n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
-                     batch_size=64, replace=1000, eps_dec=1e-5,
+                     batch_size=128, replace=200, eps_dec=5e-5,
                      checkpoint_dir='models/', algo='DQNAgent',
                      env_name='CartPole-v0-FC')
 
@@ -54,13 +57,13 @@ if __name__ == '__main__':
         score = 0
         while not done:
             env.render()
-            action = agent.choose_action(observation)
+            action = agent.choose_action(observation, greedy_action)
             next_observation, reward, done, info = env.step(action)
             score += reward
 
-            if not load_checkpoint:
+            if learn:
                 # store the transition (s,a,r,s') inside the replay memory
-                agent.store_transition(observation, action, reward, next_observation, int(done))
+                agent.store_transition(observation, action, reward, next_observation, done)
                 # learn through the experience (if there's enough batches)
                 agent.learn()
             observation = next_observation
@@ -71,6 +74,7 @@ if __name__ == '__main__':
         scores.append(score)
         steps_array.append(n_steps)
 
+        # Average score from last 100 episode
         avg_score = np.mean(scores[-100:])
         print('episode: ', i, 'score: ', score,
               ' average score %.1f' % avg_score, 'best score %.2f' % best_score,
@@ -82,12 +86,11 @@ if __name__ == '__main__':
             best_score = avg_score
 
         eps_history.append(agent.epsilon)
-        if load_checkpoint and n_steps >= 18000:
+        if load_checkpoint and not learn and n_steps >= 18000:
             break
 
     # for graph piloting
     fname = agent.algo + '_' + agent.env_name + '_lr' + str(agent.lr) + '_' + str(n_games) + 'games'
     figure_file = 'plots/' + fname + '.png'
 
-    x = [i + 1 for i in range(len(scores))]
     plot_learning_curve(steps_array, scores, eps_history, figure_file)

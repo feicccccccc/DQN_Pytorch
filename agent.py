@@ -64,17 +64,28 @@ class DQNAgent(object):
                                        name=self.env_name+'_'+self.algo+'_q_next',
                                        cheakpoint_dir=self.checkpoint)
 
-    def choose_action(self, observation):
+    def choose_action(self, observation, absolute_greedy=False):
         """
         choose action base on the current observation
         epsilon decay from high to eps_min
+        absolute_greedy flag can turn behavioral policy to target policy, which in general maybe totally different
+        :param absolute_greedy: flag to determine action. Turn behavioural network to target network
         :param observation: observation from the env
         :return: the action to take base on epsilon-greedy policy
         """
+        if absolute_greedy:
+            state = torch.tensor([observation], dtype=torch.float).to(self.q_eval.device)
+            with torch.no_grad():
+                actions = self.q_eval.forward(state)
+            action = actions.argmax().item()
+            return action
+
         if np.random.random() > self.epsilon:
             # move the observation to the network's device
             # [] to add batch dimension
             state = torch.tensor([observation], dtype=torch.float).to(self.q_eval.device)
+            # no need to use autograd since we are going to do it again in experience replay
+            # not optimal but doable
             with torch.no_grad():
                 actions = self.q_eval.forward(state)
             # get the indices of the maximum output (probability)
@@ -124,7 +135,7 @@ class DQNAgent(object):
         :return: None
         """
         if self.learn_step_counter % self.replace_target_counter == 0:
-            print("Replacing target network weight with eval network")
+            # print("Replacing target network weight with eval network")
             self.q_next.load_state_dict(self.q_eval.state_dict())
 
     def decrement_epsilon(self):
