@@ -25,7 +25,7 @@ if __name__ == '__main__':
     load_checkpoint = True  # if user want to restart from checkpoint
     greedy_action = False  # use behavioural policy / target policy
     learn = True
-    initial_epsilon = 1.0
+    initial_epsilon = 0.5
     n_games = 1000  # number of episode
 
     # replace target network with evaluation network after 1000 step
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     #                  checkpoint_dir='models/', algo='DQNAgent',
     #                  env_name='CartPole-v0-RGB')
 
-    agent = DQNAgent(gamma=0.99, epsilon=initial_epsilon, lr=0.00001,
+    agent = DQNAgent(gamma=0.99, epsilon=initial_epsilon, lr=0.0001,
                      input_dims=env.observation_space.shape,
                      n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
                      batch_size=128, replace=200, eps_dec=5e-5,
@@ -81,7 +81,7 @@ if __name__ == '__main__':
               'epsilon %.2f' % agent.epsilon, 'steps', n_steps)
 
         if avg_score > best_score:
-            if not load_checkpoint:
+            if learn:
                 agent.save_models()
             best_score = avg_score
 
