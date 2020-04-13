@@ -23,8 +23,8 @@ if __name__ == '__main__':
     init_screen = env.reset()
     best_score = -np.inf
     load_checkpoint = True  # if user want to restart from checkpoint
-    greedy_action = False  # use behavioural policy / target policy
-    learn = True
+    greedy_action = True  # use behavioural policy / target policy
+    learn = False
     initial_epsilon = 0.5
     n_games = 1000  # number of episode
 
