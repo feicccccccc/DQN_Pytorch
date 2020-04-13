@@ -9,6 +9,7 @@ Add a lot of comment for reference
 """
 
 import gym
+import gym_cartpole_swingup
 import numpy as np
 from agent import DQNAgent
 from utils import plot_learning_curve, make_env
@@ -18,14 +19,15 @@ NUMBER_OF_FRAME = 4
 if __name__ == '__main__':
 
     # env = make_env("CartPole-v0")
-    env = gym.make("CartPole-v1")  # same env with different registry
+    # env = gym.make("CartPole-v1")  # same env with different registry
+    env = gym.make("CartPoleSwingUp-v0")
 
-    init_screen = env.reset()
+    # init_screen = env.reset()
     best_score = -np.inf
-    load_checkpoint = True  # if user want to restart from checkpoint
-    greedy_action = True  # use behavioural policy / target policy
+    load_checkpoint = False  # if user want to restart from checkpoint
+    greedy_action = False  # use behavioural policy / target policy
     learn = False
-    initial_epsilon = 0.5
+    initial_epsilon = 1.0
     n_games = 1000  # number of episode
 
     # replace target network with evaluation network after 1000 step
@@ -36,12 +38,19 @@ if __name__ == '__main__':
     #                  checkpoint_dir='models/', algo='DQNAgent',
     #                  env_name='CartPole-v0-RGB')
 
+    # agent = DQNAgent(gamma=0.99, epsilon=initial_epsilon, lr=0.0001,
+    #                  input_dims=env.observation_space.shape,
+    #                  n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
+    #                  batch_size=128, replace=200, eps_dec=5e-5,
+    #                  checkpoint_dir='models/', algo='DQNAgent',
+    #                  env_name='CartPole-v0-FC')
+
     agent = DQNAgent(gamma=0.99, epsilon=initial_epsilon, lr=0.0001,
                      input_dims=env.observation_space.shape,
                      n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
                      batch_size=128, replace=200, eps_dec=5e-5,
                      checkpoint_dir='models/', algo='DQNAgent',
-                     env_name='CartPole-v0-FC')
+                     env_name='CartPole-SwingUp-FC')
 
     if load_checkpoint:
         agent.load_models()
