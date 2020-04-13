@@ -170,7 +170,13 @@ class DQNAgent(object):
         # Estimate Q value
         # Get the network output actions value from experience
         q_pred = self.q_eval.forward(states)[indices, actions]
-        # more like V(s) = max_a Q(s,a)
+        # Bellmen equation
+        # for (s,a,r,s') tuple
+        # Q(s,a) = r + max(a')Q(s',a')
+        # eval on q_next, to avoid updating the target network which may result in local optimal
+        # This part is actually tricky.
+        # If you are looking at the code, you may want to refer to the original paper for more information
+        # why there are two network to eval the Q(s,a)
         q_next = self.q_next.forward(next_states).max(dim=1)[0]
 
         # Change the reward of terminal state to 0
@@ -178,8 +184,8 @@ class DQNAgent(object):
         # 1 step look ahead
         q_target = rewards + self.gamma * q_next
 
-        # learning loss
-        loss = self.q_eval.loss(q_pred, q_target.detach())
+        # learning loss between the TD target and the current estimate
+        loss = self.q_eval.loss(q_pred, q_target.detach())  # no autograd on q_target
         # compute the gradient
         loss.backward()
 
