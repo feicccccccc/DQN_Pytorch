@@ -14,7 +14,8 @@ from replay_mem import ReplayBuffer
 class DQNAgent(object):
     def __init__(self, gamma, epsilon, lr, n_actions, input_dims,
                  mem_size, batch_size, eps_min=0.01, eps_dec=5e-4,
-                 replace=1000, algo=None, env_name=None, checkpoint_dir='tmp/dqn'):
+                 replace=1000, algo=None, env_name=None, checkpoint_dir='tmp/dqn',
+                 reward_shaping = False):
         """
         Init the Agent parameter
         With decaying epsilon-greedy policy
@@ -50,6 +51,7 @@ class DQNAgent(object):
         self.checkpoint = checkpoint_dir
         self.action_space = [i for i in range(n_actions)]
         self.learn_step_counter = 0
+        self.reward_shaping = reward_shaping
 
         self.memory = ReplayBuffer(mem_size, input_dims, n_actions)
 
@@ -108,7 +110,11 @@ class DQNAgent(object):
         :param done: terminate state?
         :return: None
         """
-        self.memory.store_transition(state, action, reward, next_state, done)
+        if self.reward_shaping:
+            shaped_reward = self.shape_reward(reward, state)
+        else:
+            shaped_reward = reward
+        self.memory.store_transition(state, action, shaped_reward, next_state, done)
 
     def sample_memory(self):
         """
@@ -137,6 +143,22 @@ class DQNAgent(object):
         if self.learn_step_counter % self.replace_target_counter == 0:
             # print("Replacing target network weight with eval network")
             self.q_next.load_state_dict(self.q_eval.state_dict())
+
+    @staticmethod
+    def shape_reward(reward, states):
+        """
+        Shape the rewards in order to affect the agent behavior.
+        THe current method try to force the cart move to center, but it seems limit the agent ability to explore
+
+
+        :param rewards: raw reward from env
+        :param states: observation from the env
+        :return: shaped reward
+        """
+        state = np.array(states)
+        position = states[0]
+        output = np.array(reward) * (2.4 - abs(position)) # higher reward when x_pos close to 0/center
+        return output
 
     def decrement_epsilon(self):
         # hmmm interesting, linear decrement but not exponential decay.

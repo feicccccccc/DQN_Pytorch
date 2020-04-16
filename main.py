@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     init_screen = env.reset()
     best_score = -np.inf
-    load_checkpoint = True  # if user want to restart from checkpoint
+    load_checkpoint = False  # if user want to restart from checkpoint
     greedy_action = False  # use behavioural policy / target policy
     learn = True
     initial_epsilon = 0.5
@@ -39,9 +39,9 @@ if __name__ == '__main__':
     agent = DQNAgent(gamma=0.99, epsilon=initial_epsilon, lr=0.0001,
                      input_dims=env.observation_space.shape,
                      n_actions=env.action_space.n, mem_size=50000, eps_min=0.1,
-                     batch_size=128, replace=200, eps_dec=5e-5,
-                     checkpoint_dir='models/', algo='DQNAgent',
-                     env_name='CartPole-v0-FC')
+                     batch_size=128, replace=200, eps_dec=1e-5,
+                     checkpoint_dir='models/', algo='DQNAgent_RewardShaping',
+                     env_name='CartPole-v0-FC', reward_shaping=True)
 
     if load_checkpoint:
         agent.load_models()
